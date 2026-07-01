@@ -1,0 +1,111 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { Trash2, Save } from "lucide-react";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/_authenticated/notas")({
+  component: NotasPage,
+});
+
+function NotasPage() {
+  const qc = useQueryClient();
+  const [titulo, setTitulo] = useState("");
+  const [conteudo, setConteudo] = useState("");
+
+  const { data } = useQuery({
+    queryKey: ["notas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("notas")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  async function adicionar() {
+    if (!titulo.trim()) return;
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return;
+    const { error } = await supabase
+      .from("notas")
+      .insert({ user_id: user.user.id, titulo, conteudo });
+    if (error) toast.error(error.message);
+    else {
+      setTitulo("");
+      setConteudo("");
+      qc.invalidateQueries({ queryKey: ["notas"] });
+      toast.success("Nota salva");
+    }
+  }
+
+  async function remover(id: string) {
+    const { error } = await supabase.from("notas").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else qc.invalidateQueries({ queryKey: ["notas"] });
+  }
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-black tracking-tight mb-2">Notas</h1>
+      <p className="text-neutral-500 mb-8">
+        Anote temas, repertórios e ideias para suas próximas redações.
+      </p>
+
+      <div className="bg-white border border-neutral-200 rounded-2xl p-5 mb-6">
+        <input
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          placeholder="Título da nota"
+          className="w-full font-bold text-lg mb-3 focus:outline-none"
+        />
+        <textarea
+          value={conteudo}
+          onChange={(e) => setConteudo(e.target.value)}
+          placeholder="Escreva aqui suas ideias, repertórios, citações…"
+          rows={4}
+          className="w-full text-sm leading-relaxed focus:outline-none resize-none"
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={adicionar}
+            className="inline-flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-neutral-800"
+          >
+            <Save className="w-4 h-4" /> Salvar
+          </button>
+        </div>
+      </div>
+
+      {(data ?? []).length === 0 ? (
+        <p className="text-sm text-neutral-500">Nenhuma nota ainda.</p>
+      ) : (
+        <div className="grid gap-3">
+          {data!.map((n) => (
+            <div key={n.id} className="bg-white border border-neutral-200 rounded-2xl p-5">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h3 className="font-bold">{n.titulo}</h3>
+                <button
+                  onClick={() => remover(n.id)}
+                  className="text-neutral-400 hover:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              {n.conteudo && (
+                <p className="text-sm text-neutral-700 whitespace-pre-wrap leading-relaxed">
+                  {n.conteudo}
+                </p>
+              )}
+              <p className="text-xs text-neutral-400 mt-2">
+                {new Date(n.created_at).toLocaleString("pt-BR")}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
