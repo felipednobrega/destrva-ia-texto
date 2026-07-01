@@ -110,6 +110,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/88f498d1-6780-4e9a-a9b5-bbc9e5cdd73f/id-preview-4c758f6a--d8a76bd3-fee9-4747-9a2c-c156583a8480.lovable.app-1781464053397.png",
       },
+      { name: "description", content: "A web application for remixing and managing projects." },
+      { property: "og:description", content: "A web application for remixing and managing projects." },
+      { name: "twitter:description", content: "A web application for remixing and managing projects." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2732daa6-37d7-477d-906e-5631b76342ed/id-preview-0cd0a487--316a6eab-00d1-42b9-9b40-f6a1ad424d1a.lovable.app-1782925387171.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2732daa6-37d7-477d-906e-5631b76342ed/id-preview-0cd0a487--316a6eab-00d1-42b9-9b40-f6a1ad424d1a.lovable.app-1782925387171.png" },
     ],
     links: [
       {
