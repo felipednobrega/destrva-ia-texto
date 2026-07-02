@@ -155,11 +155,12 @@ function extractRecurringErrors(redacoes: RedacaoRow[]): RecurringError[] {
       const cur = counts.get(label);
       let example = cur?.example ?? null;
       if (!example) {
+        // pos vem de `norm` (sem acentos), então fatiamos `norm` para manter alinhamento.
         const start = Math.max(0, pos - 40);
-        const end = Math.min(raw.length, pos + 80);
-        const snippet = raw.slice(start, end).replace(/\s+/g, " ").trim();
+        const end = Math.min(norm.length, pos + 80);
+        const snippet = norm.slice(start, end).replace(/\s+/g, " ").trim();
         if (snippet.length > 20) {
-          example = (start > 0 ? "…" : "") + snippet + (end < raw.length ? "…" : "");
+          example = (start > 0 ? "…" : "") + snippet + (end < norm.length ? "…" : "");
         }
       }
       counts.set(label, {
