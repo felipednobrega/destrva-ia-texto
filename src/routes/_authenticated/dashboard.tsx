@@ -702,15 +702,79 @@ function DashboardPage() {
         </div>
 
 
-        <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <BookOpen className="w-4 h-4 text-indigo-700" />
-            <h2 className="font-bold">Recomendação de estudo</h2>
-          </div>
-          <p className="text-sm text-neutral-700 leading-relaxed">
-            {studyTip(data?.weakest ?? null)}
-          </p>
-        </div>
+        {(() => {
+          const mediaWeak =
+            data?.compMedias?.find((c) => c.competencia === data?.weakest)?.media ?? 0;
+          const plan = studyPlan(data?.weakest ?? null, mediaWeak);
+          return (
+            <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <BookOpen className="w-4 h-4 text-indigo-700 shrink-0" />
+                  <h2 className="font-bold truncate">Plano de estudo personalizado</h2>
+                </div>
+                {data?.weakest && (
+                  <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-indigo-600 text-white shrink-0">
+                    {data.weakest}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-sm font-bold text-indigo-900 leading-snug">{plan.titulo}</p>
+              <p className="text-xs text-indigo-700/80 mb-4">{plan.foco}</p>
+
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-3.5 h-3.5 text-indigo-700" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                    Ações desta semana
+                  </h3>
+                </div>
+                <ul className="space-y-2">
+                  {plan.acoes.map((a, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-neutral-700 leading-snug">
+                      <span className="mt-0.5 w-5 h-5 rounded-full bg-white border border-indigo-300 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {plan.recursos.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="w-3.5 h-3.5 text-indigo-700" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                      Recursos sugeridos
+                    </h3>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {plan.recursos.map((r, i) => (
+                      <li key={i} className="text-xs text-neutral-700">
+                        <span className="font-semibold text-neutral-800">{r.label}</span>
+                        <span className="text-neutral-500"> — {r.hint}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-200 p-2.5 mb-4">
+                <Rocket className="w-3.5 h-3.5 text-indigo-700 mt-0.5 shrink-0" />
+                <p className="text-xs text-indigo-900 font-medium leading-snug">{plan.meta}</p>
+              </div>
+
+              <Link
+                to="/nova-redacao"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900"
+              >
+                Praticar agora <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Melhor e pior */}
