@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   FileText,
   TrendingUp,
+  TrendingDown,
+  Minus,
   StickyNote,
   Plus,
   Sparkles,
@@ -21,6 +23,7 @@ import {
   Crown,
   PenLine,
   CheckCircle2,
+  Circle,
   Rocket,
 } from "lucide-react";
 import { usePlano } from "@/hooks/usePlano";
