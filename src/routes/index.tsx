@@ -647,7 +647,7 @@ function SalesPage() {
       {/* Mobile login (nav é hidden em <md) */}
       <Link
         to="/auth"
-        className="fixed top-4 right-4 z-40 md:hidden inline-flex items-center px-4 h-9 rounded-full bg-white/95 backdrop-blur border border-neutral-200 text-sm font-bold text-neutral-800 shadow-md hover:bg-white"
+        className="fixed top-12 right-3 z-40 md:hidden inline-flex items-center px-3 h-8 rounded-full bg-white/95 backdrop-blur border border-neutral-200 text-xs font-bold text-neutral-800 shadow-md hover:bg-white"
       >
         Entrar
       </Link>
