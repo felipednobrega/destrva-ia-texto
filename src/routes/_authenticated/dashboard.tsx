@@ -161,22 +161,109 @@ function extractRecurringErrors(redacoes: RedacaoRow[]): RecurringError[] {
 }
 
 
-function studyTip(weakest: string | null): string {
-  if (!weakest) return "Escreva mais redações para receber recomendações personalizadas.";
-  switch (weakest) {
-    case "C1":
-      return "Foque em norma culta: revise crase, concordância verbal/nominal e pontuação. Leia em voz alta para captar deslizes.";
-    case "C2":
-      return "Trabalhe a compreensão do tema: leia os textos motivadores com atenção, traga repertório sociocultural produtivo e mantenha a tipologia dissertativo-argumentativa.";
-    case "C3":
-      return "Aprofunde a argumentação: cada parágrafo de desenvolvimento precisa de tese clara, dado/exemplo concreto e fechamento que retome a defesa.";
-    case "C4":
-      return "Pratique conectivos variados (ademais, por conseguinte, sob essa ótica) e referências anafóricas para garantir coesão entre parágrafos.";
-    case "C5":
-      return "Detalhe a proposta de intervenção com os 5 elementos: agente, ação, modo/meio, efeito e detalhamento — sempre respeitando os direitos humanos.";
-    default:
-      return "Mantenha a constância: uma redação a cada 2 dias acelera muito a evolução.";
+type StudyPlan = {
+  titulo: string;
+  foco: string;
+  acoes: string[];
+  recursos: { label: string; hint: string }[];
+  meta: string;
+};
+
+function studyPlan(weakest: string | null, mediaComp: number): StudyPlan {
+  if (!weakest) {
+    return {
+      titulo: "Comece sua jornada",
+      foco: "Sem dados suficientes",
+      acoes: [
+        "Escreva sua primeira redação usando um tema recente do ENEM.",
+        "Peça a correção pela IA para descobrir seus pontos fracos.",
+        "Volte aqui para receber um plano personalizado por competência.",
+      ],
+      recursos: [
+        { label: "Cartilha do participante ENEM", hint: "critérios oficiais das 5 competências" },
+        { label: "Banco de temas", hint: "escolha um tema para praticar hoje" },
+      ],
+      meta: "Meta inicial: 1 redação nesta semana.",
+    };
   }
+  const base: Record<string, StudyPlan> = {
+    C1: {
+      titulo: "Domínio da norma culta",
+      foco: "Gramática, ortografia e pontuação",
+      acoes: [
+        "Revise crase, concordância verbal/nominal e regência dos 10 verbos mais usados.",
+        "Reescreva 1 parágrafo antigo aplicando pontuação correta (vírgula, ponto e vírgula, dois-pontos).",
+        "Leia sua redação em voz alta antes de enviar — o ouvido pega deslizes que o olho não vê.",
+      ],
+      recursos: [
+        { label: "Nova Gramática do Português Contemporâneo", hint: "consulta rápida de regras" },
+        { label: "Guia de pontuação da FGV", hint: "PDF gratuito, 20 min de leitura" },
+      ],
+      meta: "Meta: reduzir erros gramaticais em 50% nas próximas 3 redações.",
+    },
+    C2: {
+      titulo: "Compreensão do tema e repertório",
+      foco: "Tipologia dissertativo-argumentativa + repertório",
+      acoes: [
+        "Antes de escrever, resuma o tema em 1 frase e liste 3 palavras-chave.",
+        "Monte um repertório de 5 fontes produtivas (filósofos, dados IBGE, obras literárias, leis).",
+        "Evite tangenciamento: cada parágrafo deve citar explicitamente a palavra-chave do tema.",
+      ],
+      recursos: [
+        { label: "Repertório coringa (Descomplica)", hint: "10 citações que servem para vários temas" },
+        { label: "Agenda 2030 da ONU", hint: "17 ODS = repertório atual para qualquer tema social" },
+      ],
+      meta: "Meta: usar pelo menos 2 repertórios legitimados por redação.",
+    },
+    C3: {
+      titulo: "Argumentação consistente",
+      foco: "Seleção e organização de argumentos",
+      acoes: [
+        "Estruture cada parágrafo em: tópico frasal → dado/exemplo → análise → arremate.",
+        "Traga 1 argumento causal e 1 argumento consequencial (evita repetir a mesma ideia).",
+        "Cite fatos concretos: número, ano, autor ou lei. Argumentação vaga perde nota.",
+      ],
+      recursos: [
+        { label: "Modelo Toulmin de argumentação", hint: "tese, dado, garantia, refutação" },
+        { label: "Redações nota 1000 do ENEM", hint: "analise como organizam os parágrafos" },
+      ],
+      meta: "Meta: 2 argumentos distintos e bem desenvolvidos por redação.",
+    },
+    C4: {
+      titulo: "Coesão textual",
+      foco: "Conectivos e referenciação",
+      acoes: [
+        "Comece cada parágrafo com um conectivo diferente (ademais, outrossim, por conseguinte, sob essa ótica).",
+        "Use pronomes e sinônimos para retomar ideias — evite repetir o mesmo substantivo.",
+        "Faça uma tabela pessoal com 20 conectivos organizados por função (adição, oposição, causa).",
+      ],
+      recursos: [
+        { label: "Lista de conectivos (Brasil Escola)", hint: "organizada por relação lógica" },
+        { label: "Exercícios de coesão referencial", hint: "pratique retomadas" },
+      ],
+      meta: "Meta: 0 repetição de conectivo dentro da mesma redação.",
+    },
+    C5: {
+      titulo: "Proposta de intervenção completa",
+      foco: "Os 5 elementos + direitos humanos",
+      acoes: [
+        "Toda proposta precisa de: agente, ação, modo/meio, efeito e detalhamento.",
+        "Escolha agentes diversos (Ministério da Educação, ONGs, escolas, mídia) — evite só 'o governo'.",
+        "Detalhe o modo/meio com verbo específico: 'por meio de campanhas em redes sociais com influenciadores…'",
+      ],
+      recursos: [
+        { label: "Guia dos 5 elementos (Imaginie)", hint: "checklist para conferir sua proposta" },
+        { label: "Declaração Universal dos Direitos Humanos", hint: "leitura de 15 min" },
+      ],
+      meta: "Meta: proposta com os 5 elementos identificáveis em cada redação.",
+    },
+  };
+  const plan = base[weakest] ?? base.C1;
+  const gap = Math.max(0, 200 - mediaComp);
+  return {
+    ...plan,
+    foco: `${plan.foco} · média atual ${mediaComp}/200${gap > 0 ? ` (+${gap} possíveis)` : ""}`,
+  };
 }
 
 function saudacao() {
