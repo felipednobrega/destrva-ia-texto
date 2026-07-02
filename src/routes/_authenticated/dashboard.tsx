@@ -93,53 +93,73 @@ function stripAccents(s: string) {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-function extractRecurringErrors(redacoes: RedacaoRow[]): string[] {
-  // Heurística: normaliza (sem acento, minúsculo) e procura palavras-chave únicas.
-  const KEYWORDS: Array<[string, string]> = [
-    ["crase", "Crase"],
-    ["concordancia", "Concordância"],
-    ["regencia", "Regência"],
-    ["pontuacao", "Pontuação"],
-    ["virgula", "Vírgula"],
-    ["coesao", "Coesão"],
-    ["conectivo", "Conectivos"],
-    ["repeticao", "Repetição"],
-    ["tese", "Tese"],
-    ["argument", "Argumentação"],
-    ["proposta", "Proposta de intervenção"],
-    ["intervencao", "Proposta de intervenção"],
-    ["agente", "Agente da proposta"],
-    ["detalhamento", "Detalhamento da proposta"],
-    ["ortografia", "Ortografia"],
-    ["acentuacao", "Acentuação"],
-    ["paragrafa", "Paragrafação"],
-    ["clareza", "Clareza"],
-    ["informalidade", "Informalidade"],
-    ["senso comum", "Senso comum"],
-    ["repertorio", "Repertório"],
-    ["fuga ao tema", "Fuga ao tema"],
-    ["tangenciamento", "Tangenciamento"],
-    ["norma culta", "Norma culta"],
+type RecurringError = {
+  label: string;
+  count: number;
+  total: number;
+  comp: "C1" | "C2" | "C3" | "C4" | "C5";
+  tip: string;
+};
+
+function extractRecurringErrors(redacoes: RedacaoRow[]): RecurringError[] {
+  // Heurística: normaliza (sem acento, minúsculo), busca padrões e agrupa por competência.
+  type Entry = { label: string; comp: RecurringError["comp"]; tip: string };
+  const KEYWORDS: Array<[string, Entry]> = [
+    ["crase", { label: "Crase", comp: "C1", tip: "Revise regras de crase antes de 'a' + palavra feminina." }],
+    ["concordancia", { label: "Concordância", comp: "C1", tip: "Confira sujeito↔verbo e nome↔adjetivo em cada frase." }],
+    ["regencia", { label: "Regência", comp: "C1", tip: "Cheque preposições exigidas pelos verbos (assistir a, obedecer a…)." }],
+    ["pontuacao", { label: "Pontuação", comp: "C1", tip: "Leia em voz alta: onde pausa, geralmente há vírgula ou ponto." }],
+    ["virgula", { label: "Vírgula", comp: "C1", tip: "Evite vírgula entre sujeito e verbo; use em apostos e adjuntos deslocados." }],
+    ["ortografia", { label: "Ortografia", comp: "C1", tip: "Duplique a revisão de palavras com 's/ss', 'ç', 'x/ch'." }],
+    ["acentuacao", { label: "Acentuação", comp: "C1", tip: "Reforce oxítonas, paroxítonas e monossílabos tônicos." }],
+    ["norma culta", { label: "Norma culta", comp: "C1", tip: "Evite gírias e coloquialismos; prefira registro formal." }],
+    ["informalidade", { label: "Informalidade", comp: "C1", tip: "Troque 'a gente' por 'nós' e evite expressões da fala." }],
+    ["fuga ao tema", { label: "Fuga ao tema", comp: "C2", tip: "Volte à palavra-chave do tema em cada parágrafo." }],
+    ["tangenciamento", { label: "Tangenciamento", comp: "C2", tip: "Aborde o recorte específico do tema, não o assunto genérico." }],
+    ["repertorio", { label: "Repertório", comp: "C2", tip: "Traga 1 repertório produtivo por parágrafo (autor, dado, obra)." }],
+    ["tese", { label: "Tese", comp: "C3", tip: "Termine a introdução com uma tese clara e defensável." }],
+    ["argument", { label: "Argumentação", comp: "C3", tip: "Cada parágrafo: tópico frasal → dado/exemplo → arremate." }],
+    ["senso comum", { label: "Senso comum", comp: "C3", tip: "Substitua clichês por dados, autores ou fatos concretos." }],
+    ["coesao", { label: "Coesão", comp: "C4", tip: "Varie conectivos: ademais, por conseguinte, sob essa ótica…" }],
+    ["conectivo", { label: "Conectivos", comp: "C4", tip: "Comece cada parágrafo com um conectivo diferente." }],
+    ["repeticao", { label: "Repetição", comp: "C4", tip: "Use sinônimos e retomadas pronominais para evitar repetições." }],
+    ["paragrafa", { label: "Paragrafação", comp: "C4", tip: "Um parágrafo = uma ideia central bem desenvolvida." }],
+    ["clareza", { label: "Clareza", comp: "C4", tip: "Frases curtas: sujeito + verbo + complemento." }],
+    ["proposta", { label: "Proposta de intervenção", comp: "C5", tip: "Inclua os 5 elementos: agente, ação, meio, efeito e detalhamento." }],
+    ["intervencao", { label: "Proposta de intervenção", comp: "C5", tip: "Detalhe COMO o agente executará a ação proposta." }],
+    ["agente", { label: "Agente da proposta", comp: "C5", tip: "Nomeie um agente concreto (Ministério, ONG, escola…)." }],
+    ["detalhamento", { label: "Detalhamento da proposta", comp: "C5", tip: "Explique modo/meio e efeito esperado da intervenção." }],
   ];
-  const counts = new Map<string, number>();
+  const counts = new Map<string, { count: number; entry: Entry }>();
   for (const r of redacoes) {
     const blob =
       (r.feedback ?? "") +
       " " +
       (r.comentarios ? JSON.stringify(r.comentarios) : "");
     const norm = stripAccents(blob.toLowerCase());
-    const hits = new Set<string>();
-    for (const [needle, label] of KEYWORDS) {
-      if (norm.includes(needle)) hits.add(label);
+    const hits = new Map<string, Entry>();
+    for (const [needle, entry] of KEYWORDS) {
+      if (norm.includes(needle)) hits.set(entry.label, entry);
     }
-    for (const label of hits) counts.set(label, (counts.get(label) ?? 0) + 1);
+    for (const [label, entry] of hits) {
+      const cur = counts.get(label);
+      counts.set(label, { count: (cur?.count ?? 0) + 1, entry });
+    }
   }
-  return [...counts.entries()]
-    .filter(([, c]) => c >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([k]) => k);
+  const total = redacoes.length;
+  return [...counts.values()]
+    .filter((v) => v.count >= 2)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4)
+    .map((v) => ({
+      label: v.entry.label,
+      comp: v.entry.comp,
+      tip: v.entry.tip,
+      count: v.count,
+      total,
+    }));
 }
+
 
 function studyTip(weakest: string | null): string {
   if (!weakest) return "Escreva mais redações para receber recomendações personalizadas.";
