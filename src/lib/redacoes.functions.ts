@@ -77,18 +77,17 @@ export const corrigirRedacao = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !redacao) throw new Error("Redação não encontrada");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("OPENAI_API_KEY ausente");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        // ChatGPT (OpenAI) via Lovable AI Gateway — nano é o mais barato da família GPT-5
-        model: "openai/gpt-5-nano",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
@@ -100,9 +99,9 @@ export const corrigirRedacao = createServerFn({ method: "POST" })
       }),
     });
 
-    if (res.status === 429) throw new Error("Limite de uso atingido. Tente em alguns segundos.");
-    if (res.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos.");
-    if (!res.ok) throw new Error(`Falha na IA (${res.status})`);
+    if (res.status === 429) throw new Error("Limite da OpenAI atingido. Tente em instantes.");
+    if (res.status === 401) throw new Error("Chave da OpenAI inválida. Verifique OPENAI_API_KEY.");
+    if (!res.ok) throw new Error(`Falha na OpenAI (${res.status})`);
 
     const json = await res.json();
     const finishReason = json.choices?.[0]?.finish_reason;
