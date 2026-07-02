@@ -553,30 +553,67 @@ function DashboardPage() {
       {/* Insights de IA */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-4 h-4 text-orange-600" />
-            <h2 className="font-bold">Erros recorrentes</h2>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-orange-600" />
+              <h2 className="font-bold">Erros recorrentes</h2>
+            </div>
+            {!!data?.erros.length && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                Top {data.erros.length}
+              </span>
+            )}
           </div>
+          <p className="text-xs text-neutral-500 mb-3">
+            Padrões detectados nas suas últimas correções.
+          </p>
           {!data?.erros.length ? (
-            <p className="text-sm text-neutral-500">
-              Ainda não há padrões. Corrija mais redações para descobrir seus erros mais comuns.
-            </p>
+            <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center">
+              <p className="text-sm text-neutral-500">
+                Ainda não há padrões. Corrija mais redações para descobrir seus erros mais comuns.
+              </p>
+            </div>
           ) : (
             <ul className="space-y-2">
-              {data.erros.map((e, i) => (
-                <li
-                  key={e}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-100"
-                >
-                  <span className="grid place-items-center w-7 h-7 rounded-full bg-orange-600 text-white text-xs font-black shrink-0">
-                    {i + 1}
-                  </span>
-                  <span className="font-medium text-sm">{e}</span>
-                </li>
-              ))}
+              {data.erros.map((e, i) => {
+                const pct = e.total > 0 ? Math.round((e.count / e.total) * 100) : 0;
+                return (
+                  <li
+                    key={e.label}
+                    className="group p-3 rounded-xl bg-orange-50/70 border border-orange-100 hover:border-orange-200 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="grid place-items-center w-7 h-7 rounded-full bg-orange-600 text-white text-xs font-black shrink-0">
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm truncate">{e.label}</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-orange-600/10 text-orange-700">
+                            {e.comp}
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          {e.count} de {e.total} redações · {pct}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-orange-100 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-orange-500 to-red-500"
+                        style={{ width: `${Math.max(pct, 6)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-neutral-600 mt-2 leading-snug">
+                      <span className="font-semibold text-neutral-700">Dica:</span> {e.tip}
+                    </p>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
+
 
         <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-5">
           <div className="flex items-center gap-2 mb-3">
