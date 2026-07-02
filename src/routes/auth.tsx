@@ -81,7 +81,9 @@ function AuthPage() {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
-      if (event === "SIGNED_IN" && session?.user) goDashboard();
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session?.user) {
+        goDashboard();
+      }
     });
     return () => {
       active = false;
