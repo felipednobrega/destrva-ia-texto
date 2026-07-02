@@ -767,7 +767,7 @@ function DashboardPage() {
               </div>
 
               <Link
-                to="/nova-redacao"
+                to="/redacoes/nova"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900"
               >
                 Praticar agora <ArrowRight className="w-3.5 h-3.5" />
