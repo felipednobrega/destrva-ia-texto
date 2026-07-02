@@ -946,3 +946,297 @@ function formatHMS(ms: number) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return { h: pad(h), m: pad(m), s: pad(s) };
 }
+
+// ----- Erros recorrentes -----
+
+function severity(pct: number): { label: string; badge: string; bar: string; ring: string } {
+  if (pct >= 60)
+    return {
+      label: "Crítico",
+      badge: "bg-red-600 text-white",
+      bar: "from-red-500 to-red-700",
+      ring: "border-red-200 bg-red-50/70 hover:border-red-300",
+    };
+  if (pct >= 30)
+    return {
+      label: "Moderado",
+      badge: "bg-orange-500 text-white",
+      bar: "from-orange-500 to-red-500",
+      ring: "border-orange-100 bg-orange-50/70 hover:border-orange-200",
+    };
+  return {
+    label: "Leve",
+    badge: "bg-amber-400 text-amber-950",
+    bar: "from-amber-400 to-orange-400",
+    ring: "border-amber-100 bg-amber-50/70 hover:border-amber-200",
+  };
+}
+
+function RecurringErrorsCard({ erros }: { erros: RecurringError[] }) {
+  const [expanded, setExpanded] = useState<string | null>(erros[0]?.label ?? null);
+  const criticos = erros.filter((e) => (e.count / Math.max(e.total, 1)) * 100 >= 60).length;
+
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-orange-600" />
+          <h2 className="font-bold">Erros recorrentes</h2>
+        </div>
+        {!!erros.length && (
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+            Top {erros.length}
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-neutral-500 mb-3">
+        {erros.length
+          ? `${erros.length} padrão(ões) detectado(s)${criticos ? ` · ${criticos} crítico(s)` : ""}. Toque para ver exemplo.`
+          : "Padrões detectados nas suas últimas correções."}
+      </p>
+      {!erros.length ? (
+        <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-center">
+          <p className="text-sm text-neutral-500">
+            Ainda não há padrões. Corrija mais redações para descobrir seus erros mais comuns.
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {erros.map((e, i) => {
+            const pct = e.total > 0 ? Math.round((e.count / e.total) * 100) : 0;
+            const sev = severity(pct);
+            const isOpen = expanded === e.label;
+            const TrendIcon =
+              e.trend === "up" ? TrendingUp : e.trend === "down" ? TrendingDown : Minus;
+            const trendColor =
+              e.trend === "up"
+                ? "text-red-600"
+                : e.trend === "down"
+                  ? "text-emerald-600"
+                  : "text-neutral-400";
+            const trendTitle =
+              e.trend === "up"
+                ? "Aumentando nas redações mais recentes"
+                : e.trend === "down"
+                  ? "Diminuindo — bom progresso!"
+                  : "Estável";
+            return (
+              <li key={e.label} className={`p-3 rounded-xl border transition ${sev.ring}`}>
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : e.label)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="grid place-items-center w-7 h-7 rounded-full bg-orange-600 text-white text-xs font-black shrink-0">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm truncate">{e.label}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-orange-600/10 text-orange-700">
+                          {e.comp}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${sev.badge}`}>
+                          {sev.label}
+                        </span>
+                        <TrendIcon
+                          className={`w-3.5 h-3.5 ${trendColor}`}
+                          aria-label={trendTitle}
+                        />
+                      </div>
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        {e.count} de {e.total} redações · {pct}%
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-orange-100 overflow-hidden">
+                    <div
+                      className={`h-full bg-gradient-to-r ${sev.bar}`}
+                      style={{ width: `${Math.max(pct, 6)}%` }}
+                    />
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="mt-3 space-y-2">
+                    {e.example && (
+                      <blockquote className="text-xs italic text-neutral-600 border-l-2 border-orange-300 pl-2 line-clamp-3">
+                        “{e.example}”
+                      </blockquote>
+                    )}
+                    <p className="text-xs text-neutral-700 leading-snug">
+                      <span className="font-semibold text-neutral-800">Como corrigir:</span>{" "}
+                      {e.tip}
+                    </p>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ----- Plano de estudo -----
+
+type CompMedia = { competencia: string; nome: string; media: number };
+
+function StudyPlanCard({
+  compMedias,
+  weakest,
+}: {
+  compMedias: CompMedia[];
+  weakest: string | null;
+}) {
+  const fracas = compMedias.filter((c) => c.media > 0).sort((a, b) => a.media - b.media);
+  const focos = (fracas.length ? fracas : compMedias).slice(0, 2);
+  const initial = weakest ?? focos[0]?.competencia ?? null;
+  const [active, setActive] = useState<string | null>(initial);
+  const currentComp = focos.find((c) => c.competencia === active) ?? focos[0] ?? null;
+  const plan = studyPlan(currentComp?.competencia ?? null, currentComp?.media ?? 0);
+
+  const storageKey = `study-plan-checks:${currentComp?.competencia ?? "none"}`;
+  const [checks, setChecks] = useState<boolean[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? (JSON.parse(raw) as boolean[]) : [];
+      setChecks(plan.acoes.map((_, i) => parsed[i] ?? false));
+    } catch {
+      setChecks(plan.acoes.map(() => false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, plan.acoes.length]);
+  const toggle = (i: number) => {
+    const next = checks.map((c, idx) => (idx === i ? !c : c));
+    setChecks(next);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+  const done = checks.filter(Boolean).length;
+  const progress = plan.acoes.length ? Math.round((done / plan.acoes.length) * 100) : 0;
+
+  return (
+    <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-5">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="w-4 h-4 text-indigo-700 shrink-0" />
+          <h2 className="font-bold truncate">Plano de estudo personalizado</h2>
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700/70">
+          Semanal
+        </span>
+      </div>
+
+      {focos.length > 1 && (
+        <div className="flex gap-1.5 mb-3 p-1 rounded-lg bg-white/60 border border-indigo-200">
+          {focos.map((c) => {
+            const isActive = c.competencia === (currentComp?.competencia ?? "");
+            return (
+              <button
+                key={c.competencia}
+                type="button"
+                onClick={() => setActive(c.competencia)}
+                className={`flex-1 text-[11px] font-bold px-2 py-1.5 rounded-md transition ${
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-indigo-700 hover:bg-indigo-100"
+                }`}
+              >
+                {c.competencia} · {c.media}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-sm font-bold text-indigo-900 leading-snug">{plan.titulo}</p>
+      <p className="text-xs text-indigo-700/80 mb-3">{plan.foco}</p>
+
+      {plan.acoes.length > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Target className="w-3.5 h-3.5 text-indigo-700" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                Ações desta semana
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold text-indigo-700">
+              {done}/{plan.acoes.length} · {progress}%
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white/70 border border-indigo-200 overflow-hidden mb-2">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-all"
+              style={{ width: `${Math.max(progress, done ? 8 : 0)}%` }}
+            />
+          </div>
+          <ul className="space-y-1.5">
+            {plan.acoes.map((a, i) => {
+              const checked = checks[i] ?? false;
+              return (
+                <li key={i}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(i)}
+                    className="w-full flex gap-2 text-left rounded-md p-1.5 hover:bg-white/60 transition"
+                  >
+                    {checked ? (
+                      <CheckCircle2 className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+                    ) : (
+                      <Circle className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
+                    )}
+                    <span
+                      className={`text-sm leading-snug ${
+                        checked ? "line-through text-neutral-400" : "text-neutral-700"
+                      }`}
+                    >
+                      {a}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {plan.recursos.length > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Lightbulb className="w-3.5 h-3.5 text-indigo-700" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+              Recursos sugeridos
+            </h3>
+          </div>
+          <ul className="space-y-1">
+            {plan.recursos.map((r, i) => (
+              <li key={i} className="text-xs text-neutral-700">
+                <span className="font-semibold text-neutral-800">{r.label}</span>
+                <span className="text-neutral-500"> — {r.hint}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-200 p-2.5 mb-3">
+        <Rocket className="w-3.5 h-3.5 text-indigo-700 mt-0.5 shrink-0" />
+        <p className="text-xs text-indigo-900 font-medium leading-snug">{plan.meta}</p>
+      </div>
+
+      <Link
+        to="/redacoes/nova"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900"
+      >
+        Praticar agora <ArrowRight className="w-3.5 h-3.5" />
+      </Link>
+    </div>
+  );
+}
