@@ -99,10 +99,11 @@ type RecurringError = {
   total: number;
   comp: "C1" | "C2" | "C3" | "C4" | "C5";
   tip: string;
+  example: string | null;
+  trend: "up" | "down" | "flat";
 };
 
 function extractRecurringErrors(redacoes: RedacaoRow[]): RecurringError[] {
-  // Heurística: normaliza (sem acento, minúsculo), busca padrões e agrupa por competência.
   type Entry = { label: string; comp: RecurringError["comp"]; tip: string };
   const KEYWORDS: Array<[string, Entry]> = [
     ["crase", { label: "Crase", comp: "C1", tip: "Revise regras de crase antes de 'a' + palavra feminina." }],
@@ -130,22 +131,43 @@ function extractRecurringErrors(redacoes: RedacaoRow[]): RecurringError[] {
     ["agente", { label: "Agente da proposta", comp: "C5", tip: "Nomeie um agente concreto (Ministério, ONG, escola…)." }],
     ["detalhamento", { label: "Detalhamento da proposta", comp: "C5", tip: "Explique modo/meio e efeito esperado da intervenção." }],
   ];
-  const counts = new Map<string, { count: number; entry: Entry }>();
-  for (const r of redacoes) {
-    const blob =
+  // redacoes chegam em ordem decrescente (mais recentes primeiro)
+  const half = Math.max(1, Math.floor(redacoes.length / 2));
+  const counts = new Map<
+    string,
+    { count: number; recent: number; older: number; entry: Entry; example: string | null }
+  >();
+  redacoes.forEach((r, idx) => {
+    const raw =
       (r.feedback ?? "") +
       " " +
       (r.comentarios ? JSON.stringify(r.comentarios) : "");
-    const norm = stripAccents(blob.toLowerCase());
-    const hits = new Map<string, Entry>();
+    const norm = stripAccents(raw.toLowerCase());
+    const hits = new Map<string, { entry: Entry; pos: number }>();
     for (const [needle, entry] of KEYWORDS) {
-      if (norm.includes(needle)) hits.set(entry.label, entry);
+      const pos = norm.indexOf(needle);
+      if (pos >= 0 && !hits.has(entry.label)) hits.set(entry.label, { entry, pos });
     }
-    for (const [label, entry] of hits) {
+    for (const [label, { entry, pos }] of hits) {
       const cur = counts.get(label);
-      counts.set(label, { count: (cur?.count ?? 0) + 1, entry });
+      let example = cur?.example ?? null;
+      if (!example) {
+        const start = Math.max(0, pos - 40);
+        const end = Math.min(raw.length, pos + 80);
+        const snippet = raw.slice(start, end).replace(/\s+/g, " ").trim();
+        if (snippet.length > 20) {
+          example = (start > 0 ? "…" : "") + snippet + (end < raw.length ? "…" : "");
+        }
+      }
+      counts.set(label, {
+        count: (cur?.count ?? 0) + 1,
+        recent: (cur?.recent ?? 0) + (idx < half ? 1 : 0),
+        older: (cur?.older ?? 0) + (idx >= half ? 1 : 0),
+        entry,
+        example,
+      });
     }
-  }
+  });
   const total = redacoes.length;
   return [...counts.values()]
     .filter((v) => v.count >= 2)
@@ -157,6 +179,9 @@ function extractRecurringErrors(redacoes: RedacaoRow[]): RecurringError[] {
       tip: v.entry.tip,
       count: v.count,
       total,
+      example: v.example,
+      trend:
+        v.recent > v.older ? "up" : v.recent < v.older ? "down" : "flat",
     }));
 }
 
