@@ -560,7 +560,7 @@ function SalesPage() {
       setCompetencyScores(scores);
       setEstimatedScore(total);
       setShowPaywall(true);
-    }, 1800);
+    }, 900);
   };
 
   return (

@@ -36,8 +36,8 @@ function traduzirErro(msg: string): string {
     return "Este email já tem uma conta. Tente entrar.";
   if (m.includes("password should be") || m.includes("password is too short"))
     return "A senha precisa ter pelo menos 6 caracteres.";
-  if (m.includes("rate limit") || m.includes("too many"))
-    return "Muitas tentativas. Aguarde alguns segundos e tente novamente.";
+  if (m.includes("rate limit") || m.includes("too many") || m.includes("security purposes"))
+    return "Muitas tentativas em pouco tempo. Aguarde um minuto e tente novamente.";
   if (m.includes("network") || m.includes("failed to fetch"))
     return "Sem conexão. Verifique sua internet e tente de novo.";
   if (m.includes("unable to validate email"))
@@ -57,6 +57,8 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [precisaConfirmarEmail, setPrecisaConfirmarEmail] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const navigatedRef = useRef(false);
 
   function switchMode(m: "login" | "signup") {
@@ -64,6 +66,7 @@ function AuthPage() {
     setSenha("");
     setShowPwd(false);
     setNome("");
+    setPrecisaConfirmarEmail(false);
   }
 
   useEffect(() => {
@@ -103,6 +106,7 @@ function AuthPage() {
       return;
     }
     setLoading(true);
+    setPrecisaConfirmarEmail(false);
     try {
       if (mode === "signup") {
         const nomeLimpo = nome.trim();
@@ -143,9 +147,33 @@ function AuthPage() {
       }
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Erro ao autenticar";
+      if (raw.toLowerCase().includes("email not confirmed")) setPrecisaConfirmarEmail(true);
       toast.error(traduzirErro(raw));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResendConfirmation() {
+    if (resendLoading) return;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      toast.error("Digite seu email primeiro.");
+      return;
+    }
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: cleanEmail,
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) throw error;
+      toast.success("Email de confirmação reenviado. Verifique sua caixa de entrada.");
+    } catch (err) {
+      toast.error(err instanceof Error ? traduzirErro(err.message) : "Erro ao reenviar email");
+    } finally {
+      setResendLoading(false);
     }
   }
 
@@ -389,6 +417,22 @@ function AuthPage() {
                 >
                   {forgotLoading ? "Enviando…" : "Esqueci minha senha"}
                 </button>
+              </div>
+            )}
+
+            {mode === "login" && precisaConfirmarEmail && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                <p className="text-xs text-amber-800 font-medium flex-1">
+                  Não recebeu o email de confirmação?{" "}
+                  <button
+                    type="button"
+                    onClick={handleResendConfirmation}
+                    disabled={resendLoading}
+                    className="font-bold underline hover:text-amber-900 disabled:opacity-50"
+                  >
+                    {resendLoading ? "Reenviando…" : "Reenviar email"}
+                  </button>
+                </p>
               </div>
             )}
 
