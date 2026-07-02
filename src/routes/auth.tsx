@@ -141,11 +141,15 @@ function AuthPage() {
         }
         toast.success("Conta criada! Bem-vindo.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: senha,
         });
         if (error) throw error;
+        if (data.session?.user && !navigatedRef.current) {
+          navigatedRef.current = true;
+          router.navigate({ to: "/dashboard", replace: true });
+        }
       }
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Erro ao autenticar";
