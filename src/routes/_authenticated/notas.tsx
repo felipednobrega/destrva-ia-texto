@@ -97,9 +97,19 @@ function NotasPage() {
         <div className="flex justify-end">
           <button
             onClick={adicionar}
-            className="inline-flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-neutral-800"
+            disabled={saving}
+            className="inline-flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <Save className="w-4 h-4" /> Salvar
+            <Save className="w-4 h-4" /> {saving ? "Salvando…" : "Salvar"}
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <p className="text-sm text-red-600">Erro ao carregar notas. Recarregue a página.</p>
+      ) : isLoading ? (
+        <p className="text-sm text-neutral-500">Carregando…</p>
+      ) : (data ?? []).length === 0 ? (
           </button>
         </div>
       </div>
