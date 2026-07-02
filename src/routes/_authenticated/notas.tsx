@@ -110,11 +110,6 @@ function NotasPage() {
       ) : isLoading ? (
         <p className="text-sm text-neutral-500">Carregando…</p>
       ) : (data ?? []).length === 0 ? (
-          </button>
-        </div>
-      </div>
-
-      {(data ?? []).length === 0 ? (
         <p className="text-sm text-neutral-500">Nenhuma nota ainda.</p>
       ) : (
         <div className="grid gap-3">
