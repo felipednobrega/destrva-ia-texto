@@ -87,8 +87,8 @@ export const corrigirRedacao = createServerFn({ method: "POST" })
         "Lovable-API-Key": apiKey,
       },
       body: JSON.stringify({
-        // Modelo mais barato disponível no Lovable AI Gateway para reduzir custo por correção
-        model: "google/gemini-2.5-flash-lite",
+        // ChatGPT (OpenAI) via Lovable AI Gateway — nano é o mais barato da família GPT-5
+        model: "openai/gpt-5-nano",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
