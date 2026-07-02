@@ -144,7 +144,7 @@ export function Quiz({ isOpen, onClose, onPricing, onCorrection }: QuizProps) {
                 initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.15 }}
                 className="space-y-7"
               >
                 {/* Progress header */}
@@ -187,7 +187,7 @@ export function Quiz({ isOpen, onClose, onPricing, onCorrection }: QuizProps) {
                       onClick={() => handleNext(option.value)}
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.04 }}
+                      transition={{ delay: idx * 0.02, duration: 0.15 }}
                       whileHover={{ x: 4 }}
                       className="group flex items-center justify-between gap-3 p-5 rounded-2xl bg-neutral-50 border border-neutral-100 hover:bg-white hover:border-indigo-600 hover:shadow-[0_8px_30px_-8px_rgba(79,70,229,0.35)] transition-all text-left"
                     >

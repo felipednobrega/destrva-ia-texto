@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { corrigirRedacao } from "@/lib/redacoes.functions";
 import { usePlano } from "@/hooks/usePlano";
+import { AnalisandoRedacao } from "@/components/AnalisandoRedacao";
 import {
   TEMAS,
   getTemaDoDia,
@@ -34,6 +35,7 @@ function NovaRedacaoPage() {
   const [temaLivre, setTemaLivre] = useState("");
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(false);
+  const [analisando, setAnalisando] = useState(false);
 
   // Quantas redações o usuário já teve corrigidas hoje (para gate do plano free)
   const { data: corrigidasHoje = 0, isLoading: usoLoading } = useQuery({
@@ -95,6 +97,8 @@ function NovaRedacaoPage() {
       return;
     }
     setLoading(true);
+    setAnalisando(true);
+    const inicio = Date.now();
     let redacaoId: string | null = null;
     try {
       const { data: user } = await supabase.auth.getUser();
@@ -107,6 +111,8 @@ function NovaRedacaoPage() {
       if (error || !data) throw error ?? new Error("Falha ao salvar");
       redacaoId = data.id;
       await corrigir({ data: { redacaoId: data.id } });
+      const restante = 4_000 - (Date.now() - inicio);
+      if (restante > 0) await new Promise((r) => setTimeout(r, restante));
       await qc.invalidateQueries({ queryKey: ["corrigidasHoje"] });
       await qc.invalidateQueries({ queryKey: ["redacoes"] });
       await qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -122,6 +128,7 @@ function NovaRedacaoPage() {
         await qc.invalidateQueries({ queryKey: ["dashboard"] });
       }
       toast.error(e instanceof Error ? e.message : "Erro ao corrigir");
+      setAnalisando(false);
     } finally {
       setLoading(false);
     }
@@ -222,6 +229,7 @@ function NovaRedacaoPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto">
+      {analisando && <AnalisandoRedacao />}
       <Link
         to="/redacoes"
         className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 mb-6"

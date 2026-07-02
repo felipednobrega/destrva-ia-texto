@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { corrigirRedacao } from "@/lib/redacoes.functions";
+import { AnalisandoRedacao } from "@/components/AnalisandoRedacao";
 
 export const Route = createFileRoute("/_authenticated/redacoes/$id")({
   component: RedacaoDetailPage,
@@ -33,8 +34,11 @@ function RedacaoDetailPage() {
 
   async function handleCorrigir() {
     setCorrigindo(true);
+    const inicio = Date.now();
     try {
       await corrigir({ data: { redacaoId: id } });
+      const restante = 4_000 - (Date.now() - inicio);
+      if (restante > 0) await new Promise((r) => setTimeout(r, restante));
       await refetch();
       await qc.invalidateQueries({ queryKey: ["corrigidasHoje"] });
       await qc.invalidateQueries({ queryKey: ["redacoes"] });
@@ -76,6 +80,7 @@ function RedacaoDetailPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto">
+      {corrigindo && <AnalisandoRedacao />}
       <Link
         to="/redacoes"
         className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 mb-6"
