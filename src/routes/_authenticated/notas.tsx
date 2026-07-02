@@ -13,8 +13,9 @@ function NotasPage() {
   const qc = useQueryClient();
   const [titulo, setTitulo] = useState("");
   const [conteudo, setConteudo] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const { data } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["notas"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -24,28 +25,52 @@ function NotasPage() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 30_000,
   });
 
   async function adicionar() {
-    if (!titulo.trim()) return;
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) return;
-    const { error } = await supabase
-      .from("notas")
-      .insert({ user_id: user.user.id, titulo, conteudo });
-    if (error) toast.error(error.message);
-    else {
+    if (saving) return;
+    const t = titulo.trim();
+    const c = conteudo.trim();
+    if (!t) {
+      toast.error("Dê um título à nota antes de salvar.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) {
+        toast.error("Sessão expirada. Entre novamente para salvar.");
+        return;
+      }
+      const { error } = await supabase
+        .from("notas")
+        .insert({ user_id: userRes.user.id, titulo: t, conteudo: c || null });
+      if (error) {
+        toast.error(`Não foi possível salvar: ${error.message}`);
+        return;
+      }
       setTitulo("");
       setConteudo("");
-      qc.invalidateQueries({ queryKey: ["notas"] });
-      toast.success("Nota salva");
+      await qc.invalidateQueries({ queryKey: ["notas"] });
+      toast.success("Nota salva e sincronizada");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function remover(id: string) {
+    const prev = qc.getQueryData<typeof data>(["notas"]);
+    qc.setQueryData(["notas"], (old: typeof data) =>
+      (old ?? []).filter((n) => n.id !== id),
+    );
     const { error } = await supabase.from("notas").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else qc.invalidateQueries({ queryKey: ["notas"] });
+    if (error) {
+      qc.setQueryData(["notas"], prev);
+      toast.error(`Não foi possível excluir: ${error.message}`);
+    } else {
+      qc.invalidateQueries({ queryKey: ["notas"] });
+    }
   }
 
   return (
