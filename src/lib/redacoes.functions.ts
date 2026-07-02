@@ -36,6 +36,131 @@ Retorne APENAS JSON válido no formato:
   "sugestoes": ["dica 1", "dica 2", "dica 3"]
 }`;
 
+type CorrecaoIa = {
+  c1: unknown;
+  c2: unknown;
+  c3: unknown;
+  c4: unknown;
+  c5: unknown;
+  nota_total?: unknown;
+  feedback?: unknown;
+  comentarios?: Record<string, unknown>;
+  sugestoes?: unknown;
+};
+
+function normalizarTexto(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function notaPorFaixa(valor: number, faixas: [number, number, number, number, number]) {
+  if (valor >= faixas[4]) return 200;
+  if (valor >= faixas[3]) return 160;
+  if (valor >= faixas[2]) return 120;
+  if (valor >= faixas[1]) return 80;
+  if (valor >= faixas[0]) return 40;
+  return 0;
+}
+
+function gerarCorrecaoLocal(tema: string, texto: string): CorrecaoIa {
+  const textoLimpo = texto.trim();
+  const normalizado = normalizarTexto(textoLimpo);
+  const palavras = normalizado.match(/[a-z0-9]+/g) ?? [];
+  const frases = textoLimpo.split(/[.!?]+/).filter((frase) => frase.trim().length > 20);
+  const paragrafos = textoLimpo.split(/\n\s*\n|\n/).filter((p) => p.trim().length > 40);
+  const conectivos = [
+    "portanto",
+    "alem disso",
+    "desse modo",
+    "nesse sentido",
+    "contudo",
+    "entretanto",
+    "por conseguinte",
+    "assim",
+    "logo",
+    "dessa forma",
+    "em primeiro lugar",
+    "em segundo lugar",
+  ];
+  const proposta = ["governo", "estado", "ministerio", "escola", "midia", "sociedade", "familia"];
+  const acao = ["deve", "devem", "promover", "criar", "implementar", "realizar", "fiscalizar", "investir"];
+  const meio = ["por meio", "atraves", "mediante", "campanha", "programa", "politica publica", "palestra"];
+  const efeito = ["a fim de", "para que", "com o objetivo", "visando", "consequentemente", "reduzir", "combater"];
+  const temaTokens = normalizarTexto(tema).match(/[a-z0-9]{4,}/g) ?? [];
+  const temaAderencia = temaTokens.filter((token) => normalizado.includes(token)).length;
+  const conectivosUsados = conectivos.filter((item) => normalizado.includes(item)).length;
+  const temProposta = proposta.some((item) => normalizado.includes(item));
+  const temAcao = acao.some((item) => normalizado.includes(item));
+  const temMeio = meio.some((item) => normalizado.includes(item));
+  const temEfeito = efeito.some((item) => normalizado.includes(item));
+  const temCitacao = /segundo|conforme|de acordo|constitui[cç][aã]o|onu|ibge|fil[oó]sofo|s[oó]ci[oó]logo/i.test(textoLimpo);
+  const pontuacaoBasica = /[.!?]/.test(textoLimpo) && /,/.test(textoLimpo);
+
+  if (palavras.length < 110) {
+    return {
+      c1: pontuacaoBasica ? 80 : 40,
+      c2: temaAderencia > 0 ? 80 : 40,
+      c3: 40,
+      c4: conectivosUsados > 0 ? 80 : 40,
+      c5: temProposta && temAcao ? 80 : 40,
+      feedback:
+        "Correção automática básica: o texto parece curto para o padrão ENEM, então a nota foi limitada. Desenvolva introdução, dois argumentos e uma intervenção completa.",
+      comentarios: {
+        c1: "Há indícios de estrutura linguística, mas a extensão reduzida dificulta avaliar domínio consistente da norma culta.",
+        c2: temaAderencia > 0 ? "O tema aparece no texto, porém precisa ser desenvolvido com mais profundidade." : "A relação com o tema precisa ficar mais explícita.",
+        c3: "A argumentação ainda está pouco desenvolvida; inclua repertório, causa, consequência e defesa clara do ponto de vista.",
+        c4: "Use conectivos entre períodos e parágrafos para melhorar a progressão textual.",
+        c5: "A proposta de intervenção precisa apresentar agente, ação, meio, efeito e detalhamento.",
+      },
+      sugestoes: [
+        "Escreva pelo menos 4 parágrafos: introdução, dois desenvolvimentos e conclusão.",
+        "Inclua repertório sociocultural conectado ao tema.",
+        "Finalize com proposta de intervenção completa: agente, ação, meio, finalidade e detalhamento.",
+      ],
+    };
+  }
+
+  const c1 = notaPorFaixa((pontuacaoBasica ? 1 : 0) + (frases.length >= 6 ? 1 : 0) + (palavras.length >= 260 ? 1 : 0), [1, 2, 3, 4, 5]);
+  const c2 = notaPorFaixa(temaAderencia + (temCitacao ? 1 : 0) + (paragrafos.length >= 4 ? 1 : 0), [1, 2, 3, 4, 5]);
+  const c3 = notaPorFaixa((paragrafos.length >= 3 ? 1 : 0) + (frases.length >= 7 ? 1 : 0) + (temCitacao ? 1 : 0) + (palavras.length >= 320 ? 1 : 0), [1, 2, 3, 4, 5]);
+  const c4 = notaPorFaixa(conectivosUsados + (paragrafos.length >= 4 ? 1 : 0), [1, 2, 3, 4, 5]);
+  const c5 = notaPorFaixa([temProposta, temAcao, temMeio, temEfeito].filter(Boolean).length, [1, 2, 3, 4, 5]);
+
+  return {
+    c1,
+    c2,
+    c3,
+    c4,
+    c5,
+    feedback:
+      "Correção automática básica gerada sem consumir créditos de IA. Ela estima a nota por critérios estruturais do ENEM; quando a cota de IA estiver disponível, a análise ficará mais detalhada.",
+    comentarios: {
+      c1: pontuacaoBasica
+        ? "O texto apresenta pontuação básica e organização frasal. Revise concordância, regência e precisão vocabular para elevar a competência."
+        : "Reforce pontuação, períodos bem delimitados e revisão gramatical para demonstrar domínio da norma culta.",
+      c2: temaAderencia >= 2
+        ? "O texto mantém relação com o tema e tenta desenvolver a proposta. Aumente a profundidade do recorte temático."
+        : "A abordagem do tema ainda precisa ficar mais direta, com palavras-chave e problematização mais evidentes.",
+      c3: temCitacao
+        ? "Há tentativa de sustentação argumentativa com repertório. Explique melhor a ligação entre repertório, causa e consequência."
+        : "Inclua repertório sociocultural produtivo e desenvolva melhor os argumentos em defesa do ponto de vista.",
+      c4: conectivosUsados >= 3
+        ? "Há uso de conectivos, o que ajuda a progressão textual. Varie os operadores argumentativos e evite repetições."
+        : "Use mais conectivos entre ideias e parágrafos para melhorar coesão e progressão argumentativa.",
+      c5: temProposta && temAcao && temMeio && temEfeito
+        ? "A intervenção apresenta elementos importantes. Acrescente detalhamento específico para se aproximar da nota máxima."
+        : "Complete a intervenção com agente, ação, meio, efeito/finalidade e detalhamento concreto.",
+    },
+    sugestoes: [
+      "Garanta uma tese clara na introdução e retome essa tese ao longo do texto.",
+      "Em cada desenvolvimento, apresente causa ou consequência, repertório e análise própria.",
+      "Na conclusão, escreva uma intervenção completa com agente, ação, meio, finalidade e detalhamento.",
+    ],
+  };
+}
+
 export const corrigirRedacao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CorrigirInput.parse(input))
@@ -78,55 +203,51 @@ export const corrigirRedacao = createServerFn({ method: "POST" })
     if (error || !redacao) throw new Error("Redação não encontrada");
 
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
+    let parsed: CorrecaoIa;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `TEMA: ${redacao.tema}\n\nREDAÇÃO DO ALUNO:\n${redacao.texto}`,
-          },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
+    if (!apiKey) {
+      parsed = gerarCorrecaoLocal(redacao.tema, redacao.texto);
+    } else {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Lovable-API-Key": apiKey,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-lite",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: `TEMA: ${redacao.tema}\n\nREDAÇÃO DO ALUNO:\n${redacao.texto}`,
+            },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      });
 
-    if (res.status === 429) throw new Error("Limite de IA atingido. Tente em instantes.");
-    if (res.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no Lovable.");
-    if (!res.ok) throw new Error(`Falha na IA (${res.status})`);
+      if (res.status === 402) {
+        parsed = gerarCorrecaoLocal(redacao.tema, redacao.texto);
+      } else {
+        if (res.status === 429) throw new Error("Limite de IA atingido. Tente em instantes.");
+        if (!res.ok) throw new Error(`Falha na IA (${res.status})`);
 
-    const json = await res.json();
-    const finishReason = json.choices?.[0]?.finish_reason;
-    if (finishReason === "length") throw new Error("Resposta da IA foi truncada. Tente novamente.");
-    const content: string = json.choices?.[0]?.message?.content ?? "{}";
-    let parsed: {
-      c1: unknown;
-      c2: unknown;
-      c3: unknown;
-      c4: unknown;
-      c5: unknown;
-      nota_total?: unknown;
-      feedback?: unknown;
-      comentarios?: Record<string, unknown>;
-      sugestoes?: unknown;
-    };
-    try {
-      // Strip ```json fences if the model wrapped the output
-      const cleaned = content
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "");
-      parsed = JSON.parse(cleaned);
-    } catch {
-      throw new Error("Resposta da IA inválida");
+        const json = await res.json();
+        const finishReason = json.choices?.[0]?.finish_reason;
+        if (finishReason === "length") throw new Error("Resposta da IA foi truncada. Tente novamente.");
+        const content: string = json.choices?.[0]?.message?.content ?? "{}";
+        try {
+          // Strip ```json fences if the model wrapped the output
+          const cleaned = content
+            .trim()
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/\s*```$/i, "");
+          parsed = JSON.parse(cleaned) as CorrecaoIa;
+        } catch {
+          throw new Error("Resposta da IA inválida");
+        }
+      }
     }
 
     // Normaliza nota de competência: aceita number ou string, arredonda ao múltiplo
