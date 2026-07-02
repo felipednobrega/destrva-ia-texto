@@ -81,7 +81,9 @@ function AuthPage() {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
-      if (event === "SIGNED_IN" && session?.user) goDashboard();
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") && session?.user) {
+        goDashboard();
+      }
     });
     return () => {
       active = false;
@@ -139,11 +141,15 @@ function AuthPage() {
         }
         toast.success("Conta criada! Bem-vindo.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: senha,
         });
         if (error) throw error;
+        if (data.session?.user && !navigatedRef.current) {
+          navigatedRef.current = true;
+          router.navigate({ to: "/dashboard", replace: true });
+        }
       }
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Erro ao autenticar";
