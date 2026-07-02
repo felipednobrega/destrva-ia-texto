@@ -161,22 +161,109 @@ function extractRecurringErrors(redacoes: RedacaoRow[]): RecurringError[] {
 }
 
 
-function studyTip(weakest: string | null): string {
-  if (!weakest) return "Escreva mais redações para receber recomendações personalizadas.";
-  switch (weakest) {
-    case "C1":
-      return "Foque em norma culta: revise crase, concordância verbal/nominal e pontuação. Leia em voz alta para captar deslizes.";
-    case "C2":
-      return "Trabalhe a compreensão do tema: leia os textos motivadores com atenção, traga repertório sociocultural produtivo e mantenha a tipologia dissertativo-argumentativa.";
-    case "C3":
-      return "Aprofunde a argumentação: cada parágrafo de desenvolvimento precisa de tese clara, dado/exemplo concreto e fechamento que retome a defesa.";
-    case "C4":
-      return "Pratique conectivos variados (ademais, por conseguinte, sob essa ótica) e referências anafóricas para garantir coesão entre parágrafos.";
-    case "C5":
-      return "Detalhe a proposta de intervenção com os 5 elementos: agente, ação, modo/meio, efeito e detalhamento — sempre respeitando os direitos humanos.";
-    default:
-      return "Mantenha a constância: uma redação a cada 2 dias acelera muito a evolução.";
+type StudyPlan = {
+  titulo: string;
+  foco: string;
+  acoes: string[];
+  recursos: { label: string; hint: string }[];
+  meta: string;
+};
+
+function studyPlan(weakest: string | null, mediaComp: number): StudyPlan {
+  if (!weakest) {
+    return {
+      titulo: "Comece sua jornada",
+      foco: "Sem dados suficientes",
+      acoes: [
+        "Escreva sua primeira redação usando um tema recente do ENEM.",
+        "Peça a correção pela IA para descobrir seus pontos fracos.",
+        "Volte aqui para receber um plano personalizado por competência.",
+      ],
+      recursos: [
+        { label: "Cartilha do participante ENEM", hint: "critérios oficiais das 5 competências" },
+        { label: "Banco de temas", hint: "escolha um tema para praticar hoje" },
+      ],
+      meta: "Meta inicial: 1 redação nesta semana.",
+    };
   }
+  const base: Record<string, StudyPlan> = {
+    C1: {
+      titulo: "Domínio da norma culta",
+      foco: "Gramática, ortografia e pontuação",
+      acoes: [
+        "Revise crase, concordância verbal/nominal e regência dos 10 verbos mais usados.",
+        "Reescreva 1 parágrafo antigo aplicando pontuação correta (vírgula, ponto e vírgula, dois-pontos).",
+        "Leia sua redação em voz alta antes de enviar — o ouvido pega deslizes que o olho não vê.",
+      ],
+      recursos: [
+        { label: "Nova Gramática do Português Contemporâneo", hint: "consulta rápida de regras" },
+        { label: "Guia de pontuação da FGV", hint: "PDF gratuito, 20 min de leitura" },
+      ],
+      meta: "Meta: reduzir erros gramaticais em 50% nas próximas 3 redações.",
+    },
+    C2: {
+      titulo: "Compreensão do tema e repertório",
+      foco: "Tipologia dissertativo-argumentativa + repertório",
+      acoes: [
+        "Antes de escrever, resuma o tema em 1 frase e liste 3 palavras-chave.",
+        "Monte um repertório de 5 fontes produtivas (filósofos, dados IBGE, obras literárias, leis).",
+        "Evite tangenciamento: cada parágrafo deve citar explicitamente a palavra-chave do tema.",
+      ],
+      recursos: [
+        { label: "Repertório coringa (Descomplica)", hint: "10 citações que servem para vários temas" },
+        { label: "Agenda 2030 da ONU", hint: "17 ODS = repertório atual para qualquer tema social" },
+      ],
+      meta: "Meta: usar pelo menos 2 repertórios legitimados por redação.",
+    },
+    C3: {
+      titulo: "Argumentação consistente",
+      foco: "Seleção e organização de argumentos",
+      acoes: [
+        "Estruture cada parágrafo em: tópico frasal → dado/exemplo → análise → arremate.",
+        "Traga 1 argumento causal e 1 argumento consequencial (evita repetir a mesma ideia).",
+        "Cite fatos concretos: número, ano, autor ou lei. Argumentação vaga perde nota.",
+      ],
+      recursos: [
+        { label: "Modelo Toulmin de argumentação", hint: "tese, dado, garantia, refutação" },
+        { label: "Redações nota 1000 do ENEM", hint: "analise como organizam os parágrafos" },
+      ],
+      meta: "Meta: 2 argumentos distintos e bem desenvolvidos por redação.",
+    },
+    C4: {
+      titulo: "Coesão textual",
+      foco: "Conectivos e referenciação",
+      acoes: [
+        "Comece cada parágrafo com um conectivo diferente (ademais, outrossim, por conseguinte, sob essa ótica).",
+        "Use pronomes e sinônimos para retomar ideias — evite repetir o mesmo substantivo.",
+        "Faça uma tabela pessoal com 20 conectivos organizados por função (adição, oposição, causa).",
+      ],
+      recursos: [
+        { label: "Lista de conectivos (Brasil Escola)", hint: "organizada por relação lógica" },
+        { label: "Exercícios de coesão referencial", hint: "pratique retomadas" },
+      ],
+      meta: "Meta: 0 repetição de conectivo dentro da mesma redação.",
+    },
+    C5: {
+      titulo: "Proposta de intervenção completa",
+      foco: "Os 5 elementos + direitos humanos",
+      acoes: [
+        "Toda proposta precisa de: agente, ação, modo/meio, efeito e detalhamento.",
+        "Escolha agentes diversos (Ministério da Educação, ONGs, escolas, mídia) — evite só 'o governo'.",
+        "Detalhe o modo/meio com verbo específico: 'por meio de campanhas em redes sociais com influenciadores…'",
+      ],
+      recursos: [
+        { label: "Guia dos 5 elementos (Imaginie)", hint: "checklist para conferir sua proposta" },
+        { label: "Declaração Universal dos Direitos Humanos", hint: "leitura de 15 min" },
+      ],
+      meta: "Meta: proposta com os 5 elementos identificáveis em cada redação.",
+    },
+  };
+  const plan = base[weakest] ?? base.C1;
+  const gap = Math.max(0, 200 - mediaComp);
+  return {
+    ...plan,
+    foco: `${plan.foco} · média atual ${mediaComp}/200${gap > 0 ? ` (+${gap} possíveis)` : ""}`,
+  };
 }
 
 function saudacao() {
@@ -615,15 +702,79 @@ function DashboardPage() {
         </div>
 
 
-        <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <BookOpen className="w-4 h-4 text-indigo-700" />
-            <h2 className="font-bold">Recomendação de estudo</h2>
-          </div>
-          <p className="text-sm text-neutral-700 leading-relaxed">
-            {studyTip(data?.weakest ?? null)}
-          </p>
-        </div>
+        {(() => {
+          const mediaWeak =
+            data?.compMedias?.find((c) => c.competencia === data?.weakest)?.media ?? 0;
+          const plan = studyPlan(data?.weakest ?? null, mediaWeak);
+          return (
+            <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <BookOpen className="w-4 h-4 text-indigo-700 shrink-0" />
+                  <h2 className="font-bold truncate">Plano de estudo personalizado</h2>
+                </div>
+                {data?.weakest && (
+                  <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-indigo-600 text-white shrink-0">
+                    {data.weakest}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-sm font-bold text-indigo-900 leading-snug">{plan.titulo}</p>
+              <p className="text-xs text-indigo-700/80 mb-4">{plan.foco}</p>
+
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-3.5 h-3.5 text-indigo-700" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                    Ações desta semana
+                  </h3>
+                </div>
+                <ul className="space-y-2">
+                  {plan.acoes.map((a, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-neutral-700 leading-snug">
+                      <span className="mt-0.5 w-5 h-5 rounded-full bg-white border border-indigo-300 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {plan.recursos.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lightbulb className="w-3.5 h-3.5 text-indigo-700" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                      Recursos sugeridos
+                    </h3>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {plan.recursos.map((r, i) => (
+                      <li key={i} className="text-xs text-neutral-700">
+                        <span className="font-semibold text-neutral-800">{r.label}</span>
+                        <span className="text-neutral-500"> — {r.hint}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex items-start gap-2 rounded-lg bg-white/70 border border-indigo-200 p-2.5 mb-4">
+                <Rocket className="w-3.5 h-3.5 text-indigo-700 mt-0.5 shrink-0" />
+                <p className="text-xs text-indigo-900 font-medium leading-snug">{plan.meta}</p>
+              </div>
+
+              <Link
+                to="/redacoes/nova"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900"
+              >
+                Praticar agora <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Melhor e pior */}
